@@ -22,6 +22,9 @@ import players.portfolioMCTS.PortfolioMCTSPlayer;
 import players.rhea.RHEAAgent;
 import players.rhea.RHEAParams;
 
+import players.pruningMCTS.PruningMCTSParams;
+import players.pruningMCTS.PruningMCTSPlayer;
+
 import static core.Constants.*;
 import static core.Types.TRIBE.*;
 import static core.Types.TRIBE.OUMAJI;
@@ -70,7 +73,8 @@ class Run {
         RHEA,
         OEP,
         EMCTS,
-        PORTFOLIO_MCTS
+        PORTFOLIO_MCTS,
+        HARD_PRUNING_MCTS
     }
 
     public static double K_INIT_MULT = 0.5;
@@ -102,6 +106,7 @@ class Run {
             case "OEP": return Run.PlayerType.OEP;
             case "pMCTS": return Run.PlayerType.PORTFOLIO_MCTS;
             case "EMCTS": return Run.PlayerType.EMCTS;
+            case "HardPruningMCTS": return Run.PlayerType.HARD_PRUNING_MCTS;
         }
         throw new Exception("Error: unrecognized Player Type: " + arg);
     }
@@ -201,6 +206,15 @@ class Run {
                 rheaParams.FORCE_TURN_END = rheaParams.INDIVIDUAL_LENGTH + 1;
                 rheaParams.POP_SIZE = POP_SIZE;
                 return new RHEAAgent(agentSeed, rheaParams);
+            case HARD_PRUNING_MCTS:
+                PruningMCTSParams pruningParams = new PruningMCTSParams();
+                pruningParams.stop_type = pruningParams.STOP_FMCALLS;
+                pruningParams.heuristic_method = pruningParams.DIFF_HEURISTIC;
+                pruningParams.PRIORITIZE_ROOT = true;
+                pruningParams.ROLLOUT_LENGTH = MAX_LENGTH;
+                pruningParams.FORCE_TURN_END = FORCE_TURN_END ? 5 : pruningParams.ROLLOUT_LENGTH + 1;
+                pruningParams.ROLOUTS_ENABLED = MCTS_ROLLOUTS;
+                return new PruningMCTSPlayer(agentSeed, pruningParams);
         }
         return null;
     }
