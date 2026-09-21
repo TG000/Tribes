@@ -6,6 +6,7 @@ import core.game.Game;
 import core.game.GameState;
 import players.Agent;
 import utils.ElapsedCpuTimer;
+import utils.stats.MCTSTreeStatsLogger;
 
 import java.util.ArrayList;
 import java.util.Random;
@@ -45,7 +46,17 @@ public class MCTSPlayer extends Agent {
 
         m_root.mctsSearch(ect);
 
-        return rootActions.get(m_root.mostVisitedAction());
+        int selectedAction = m_root.mostVisitedAction();
+
+        MCTSTreeStatsLogger.logTreeMetrics(
+                getClass().getSimpleName(),
+                gs.getTick(),
+                allActions.size(),
+                m_root.selectedSubtreeDepth(selectedAction),
+                m_root.selectedFullyExpandedRatio(selectedAction)
+        );
+
+        return rootActions.get(selectedAction);
 
     }
 

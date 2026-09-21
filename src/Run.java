@@ -85,6 +85,7 @@ class Run {
 
     public static int MAX_LENGTH;
     public static boolean PRUNING;
+    public static boolean PRUNE_MOVES;
     public static boolean PROGBIAS;
     public static boolean FORCE_TURN_END;
     public static boolean MCTS_ROLLOUTS;
@@ -214,6 +215,8 @@ class Run {
                 pruningParams.ROLLOUT_LENGTH = MAX_LENGTH;
                 pruningParams.FORCE_TURN_END = FORCE_TURN_END ? 5 : pruningParams.ROLLOUT_LENGTH + 1;
                 pruningParams.ROLOUTS_ENABLED = MCTS_ROLLOUTS;
+                pruningParams.PROGBIAS = PROGBIAS;
+                pruningParams.PRUNE_MOVES = PRUNE_MOVES;
                 return new PruningMCTSPlayer(agentSeed, pruningParams);
         }
         return null;

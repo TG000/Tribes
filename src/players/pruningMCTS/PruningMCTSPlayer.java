@@ -9,6 +9,7 @@ import core.game.Board;
 import players.Agent;
 import players.heuristics.StateHeuristic;
 import utils.ElapsedCpuTimer;
+import utils.stats.MCTSTreeStatsLogger;
 
 import java.util.*;
 
@@ -62,7 +63,17 @@ public class PruningMCTSPlayer extends Agent {
         m_root.setRootGameState(m_root, gs, allPlayerIDs);
         m_root.mctsSearch(ect);
 
-        return m_root.getBestAction();
+        PruningTreeNode.SelectedAction selected = m_root.getBestActionWithStats();
+
+        MCTSTreeStatsLogger.logTreeMetrics(
+                getClass().getSimpleName(),                         // Agent Class Name
+                gs.getTick(),                                       // Game Turn
+                allActions.size(),                                  // Action Space Size
+                m_root.selectedSubtreeDepth(selected.index),        // Selected Subtree Depth
+                m_root.selectedFullyExpandedRatio(selected.index)   // Fully Expanded Ratio
+        );
+
+        return selected.action;
     }
 
     private ArrayList<Action> preFilterMoveActions(GameState contextState, ArrayList<Action> actionPool, StateHeuristic heuristic) {
@@ -467,6 +478,10 @@ public class PruningMCTSPlayer extends Agent {
         }
 
         Action getBestAction() {
+            return getBestActionWithStats().action;
+        }
+
+        SelectedAction getBestActionWithStats() {
             int selected = -1;
             double bestValue = -Double.MAX_VALUE;
             boolean allEqual = true;
@@ -493,16 +508,82 @@ public class PruningMCTSPlayer extends Agent {
             }
 
             if (selected >= 0 && selected < activeActions.size() && activeActions.get(selected) != null) {
-                return activeActions.get(selected);
+                return new SelectedAction(selected, activeActions.get(selected));
             }
 
             for (int i = 0; i < activeActions.size(); i++) {
                 if (activeActions.get(i) != null) {
-                    return activeActions.get(i);
+                    return new SelectedAction(i, activeActions.get(i));
                 }
             }
 
-            return new EndTurn(state.getActiveTribeID());
+            return new SelectedAction(-1, new EndTurn(state.getActiveTribeID()));
+        }
+
+        int maxDepth() {
+            int deepest = m_depth;
+            for (PruningTreeNode child : children) {
+                if (child != null) {
+                    deepest = Math.max(deepest, child.maxDepth());
+                }
+            }
+            return deepest;
+        }
+
+        int selectedSubtreeDepth(int selectedAction) {
+            if (selectedAction < 0 || selectedAction >= children.length || children[selectedAction] == null) {
+                return m_depth;
+            }
+            return children[selectedAction].maxDepth();
+        }
+
+        double selectedFullyExpandedRatio(int selectedAction) {
+            if (selectedAction < 0 || selectedAction >= children.length || children[selectedAction] == null) {
+                return 0.0;
+            }
+            return children[selectedAction].fullyExpandedRatio();
+        }
+
+        int selectedExpandedChildren(int selectedAction) {
+            if (selectedAction < 0 || selectedAction >= children.length || children[selectedAction] == null) {
+                return 0;
+            }
+            return children[selectedAction].expandedChildren();
+        }
+
+        int selectedAvailableChildren(int selectedAction) {
+            if (selectedAction < 0 || selectedAction >= children.length || children[selectedAction] == null) {
+                return 0;
+            }
+            return children[selectedAction].availableChildren();
+        }
+
+        public double fullyExpandedRatio() {
+            int available = availableChildren();
+            if (available == 0) {
+                return 1.0;
+            }
+            return (double) expandedChildren() / (double) children.length;
+        }
+
+        private int availableChildren() {
+            int available = 0;
+            for (int i = 0; i < children.length; i++) {
+                if (!actionPrunedStatus[i]) {
+                    available++;
+                }
+            }
+            return available;
+        }
+
+        private int expandedChildren() {
+            int expanded = 0;
+            for (int i = 0; i < children.length; i++) {
+                if (!actionPrunedStatus[i] && children[i] != null) {
+                    expanded++;
+                }
+            }
+            return expanded;
         }
 
         private int getBestQAction() {
@@ -547,6 +628,16 @@ public class PruningMCTSPlayer extends Agent {
             ActionScoreRecord(int index, double score) {
                 this.index = index;
                 this.score = score;
+            }
+        }
+
+        private static class SelectedAction {
+            int index;
+            Action action;
+
+            SelectedAction(int index, Action action) {
+                this.index = index;
+                this.action = action;
             }
         }
     }

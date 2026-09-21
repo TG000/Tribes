@@ -5,25 +5,8 @@ import core.game.TribeResult;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import players.*;
-import players.emcts.EMCTSAgent;
-import players.emcts.EMCTSParams;
-import players.mc.MCParams;
-import players.mc.MonteCarloAgent;
-import players.mcts.MCTSParams;
-import players.mcts.MCTSPlayer;
-import players.oep.OEPAgent;
-import players.oep.OEPParams;
-import players.osla.OSLAParams;
-import players.osla.OneStepLookAheadAgent;
-import players.portfolio.SimplePortfolio;
-import players.portfolioMCTS.PortfolioMCTSParams;
-import players.portfolioMCTS.PortfolioMCTSPlayer;
-import players.rhea.RHEAAgent;
-import players.rhea.RHEAParams;
-import players.portfolio.RandomPortfolio;
 import utils.file.IO;
-import utils.mapelites.Feature;
-import utils.stats.GameplayStats;
+import utils.stats.MCTSTreeStatsLogger;
 import utils.stats.MultiStatSummary;
 
 import java.util.*;
@@ -35,6 +18,9 @@ import static core.Types.TRIBE.*;
  * Entry point of the framework.
  */
 public class Tournament {
+
+    private int repetitionsCount = 1;
+    private int seedsCount = 1;
 
     public static void main(String[] args) {
         //Some defaults:
@@ -70,6 +56,7 @@ public class Tournament {
 
                 //Portfolio and pruning variables:
                 Run.PRUNING = config.getBoolean("Pruning");
+                Run.PRUNE_MOVES = config.getBoolean("Move Pruning");
                 Run.PROGBIAS = config.getBoolean("Progressive Bias");
                 Run.K_INIT_MULT = config.getDouble("K init mult");
                 Run.T_MULT = config.getDouble("T mult");
@@ -102,8 +89,7 @@ public class Tournament {
                     weights = (JSONArray) config.get("pMCTS Weights");
                 Run.pMCTSweights = Run.getWeights(weights);
 
-            } catch (Exception e) {
-                System.out.println("Malformed JSON config file: " + e);
+            } catch (Exception e) {System.out.println("Malformed JSON config file: " + e);
                 e.printStackTrace();
                 printRunHelp(args);
             }
@@ -148,15 +134,20 @@ public class Tournament {
         {
             this.seeds[i] = Long.parseLong(seeds.getString(i));
         }
+        this.seedsCount = this.seeds.length;
     }
-
-
-
 
     private void run(int repetitions, boolean shift)
     {
+        this.repetitionsCount = repetitions;
+        if (this.seeds == null) {
+            this.seeds = new long[]{-1};
+            this.seedsCount = 1;
+        }
+
         int starter = 0;
         int nseed = 0;
+        int gameId = 0;
         for (long levelSeed : seeds) {
 
             if(levelSeed == -1)
@@ -191,6 +182,7 @@ public class Tournament {
                 Game game = _prepareGame(tribes, levelSeed, players, gameMode);
 
                 try {
+                    MCTSTreeStatsLogger.setGameContext(gameId, levelSeed, rep);
                     Run.runGame(game);
 
                     _addGameResults(game, assignment);
@@ -204,8 +196,10 @@ public class Tournament {
                     e.printStackTrace();
                     System.out.println("Error running a game, trying again.");
                     rep--;
+                    gameId--;
                 }
 
+                gameId++;
             }
 
             nseed++;
@@ -277,7 +271,8 @@ public class Tournament {
         for(TribeResult tr : ranking)
         {
             Types.TRIBE tribe = game.getBoard().getTribe(tr.getId()).getType();
-            int pId = assignment.get(tribe).participantId;
+            Participant participant = assignment.get(tribe);
+            int pId = participant.participantId;
 
             int victoryCount = tr.getResult() == Types.RESULT.WIN ? 1 : 0;
             stats[pId].getVariable("v").add(victoryCount);
@@ -351,9 +346,26 @@ public class Tournament {
                 System.out.printf("[R:%.2f];", stat.getVariable("r").mean());
                 System.out.printf("[Player:%d:%s]", thisParticipant.participantId, thisParticipant.playerType);
                 System.out.println();
+
+                utils.stats.MCTSTreeStatsLogger.logTournamentSummary(
+                        thisParticipant.playerType.toString(),
+                        thisParticipant.participantId,
+                        this.repetitionsCount,
+                        this.seedsCount,
+                        n,
+                        w,
+                        (double) w / n,
+                        stat.getVariable("s").mean(),
+                        stat.getVariable("t").mean() * 100.0 / 24.0,
+                        stat.getVariable("c").mean(),
+                        stat.getVariable("p").mean(),
+                        stat.getVariable("d").mean(),
+                        stat.getVariable("r").mean()
+                );
             }
         }
 
+        MCTSTreeStatsLogger.close();
     }
 
 
@@ -382,6 +394,4 @@ public class Tournament {
             this.participantId = participantId;
         }
     }
-
-
 }

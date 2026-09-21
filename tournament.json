@@ -1,9 +1,9 @@
 {
   "Game Mode" : "Capitals",
-  "Repetitions" : 2,
+  "Repetitions" : 20,
   "Rollouts" : false,
   "Search Depth" : 20,
-  "Force End" : false,
+  "Force End" : true,
   "Population Size" : 1,
   "Players" : ["MCTS", "HardPruningMCTS"],
   "Tribes" : ["Xin Xi", "Imperius"],
@@ -23,10 +23,11 @@
     "1588965819946", "1589014941900",
     "1590182659177", "1590912178111",
     "1588407146837"],
-  "Progressive Bias" : true,
+  "Progressive Bias" : false,
+  "Move Pruning" : false,
   "Pruning" : true,
   "K init mult": 0.5,
-  "T mult": 2.0,
-  "A mult": 1.5,
-  "B": 1.3
+  "T mult": 5.0,
+  "A mult": 1.0,
+  "B": 1.7
 }

@@ -329,6 +329,62 @@ class SingleTreeNode
         return selected;
     }
 
+    int maxDepth() {
+        int deepest = m_depth;
+        for (SingleTreeNode child : children) {
+            if (child != null) {
+                deepest = Math.max(deepest, child.maxDepth());
+            }
+        }
+        return deepest;
+    }
+
+    int selectedSubtreeDepth(int selectedAction) {
+        if (selectedAction < 0 || selectedAction >= children.length || children[selectedAction] == null) {
+            return m_depth;
+        }
+        return children[selectedAction].maxDepth();
+    }
+
+    double selectedFullyExpandedRatio(int selectedAction) {
+        if (selectedAction < 0 || selectedAction >= children.length || children[selectedAction] == null) {
+            return 0.0;
+        }
+        return children[selectedAction].fullyExpandedRatio();
+    }
+
+    int selectedExpandedChildren(int selectedAction) {
+        if (selectedAction < 0 || selectedAction >= children.length || children[selectedAction] == null) {
+            return 0;
+        }
+        return children[selectedAction].expandedChildren();
+    }
+
+    int selectedAvailableChildren(int selectedAction) {
+        if (selectedAction < 0 || selectedAction >= children.length || children[selectedAction] == null) {
+            return 0;
+        }
+        return children[selectedAction].children.length;
+    }
+
+    public double fullyExpandedRatio() {
+        if (children.length == 0) {
+            return 1.0;
+        }
+
+        return (double) expandedChildren() / (double) children.length;
+    }
+
+    private int expandedChildren() {
+        int expanded = 0;
+        for (SingleTreeNode child : children) {
+            if (child != null) {
+                expanded++;
+            }
+        }
+        return expanded;
+    }
+
     private int bestAction()
     {
         int selected = -1;

@@ -593,4 +593,8 @@ public class Game {
     public GameplayStats getGamePlayStats(int id) {
         return gpStats[id];
     }
+
+    public int getTick() {
+        return gs.getTick();
+    }
 }

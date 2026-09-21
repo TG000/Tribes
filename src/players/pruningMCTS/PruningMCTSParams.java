@@ -19,6 +19,11 @@ public class PruningMCTSParams extends MCTSParams {
     public double PW_BETA = 1.7;
     public int N_INIT = 5;
 
+    public String getStatsLabel() {
+        String pruningName = PROGBIAS ? "pw" : "hard pruning";
+        return PRUNE_MOVES ? pruningName + " & move pruning" : pruningName;
+    }
+
     @Override
     public void setParameterValue(String param, Object value) {
         switch (param) {
